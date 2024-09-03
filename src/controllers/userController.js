@@ -3,8 +3,13 @@ const dbConPromise = require("../config/db");
 
 // user registration
 exports.registerUser = async (req, res) => {
+  const { username, password, role } = req.body;
+
+  if (role === "admin" && !isRequestAuthorized(req)) {
+    return res.status(403).send("Unauthorized: Missing or invalid API key");
+  }
+
   try {
-    const { username, password, role } = req.body;
     const hashedPassword = await bcrypt.hash(password, 8);
 
     const [rows] = await dbConPromise.query(
@@ -55,3 +60,13 @@ exports.loginUser = async (req, res) => {
     res.status(500).send({ message: "Internal server error" });
   }
 };
+
+function isRequestAuthorized(req) {
+  const { apiKey } = req.query;
+  const expectedApiKey = process.env.ADMIN_API_KEY;
+
+  if (!apiKey || apiKey !== expectedApiKey) {
+    return false;
+  }
+  return true;
+}
